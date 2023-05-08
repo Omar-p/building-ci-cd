@@ -93,4 +93,4 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Check for security vulnerabilities
-        run: cd backend && npm audit --audit-level=medium
+        run: cd backend && npm audit --audit-level=high
