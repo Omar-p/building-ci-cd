@@ -84,3 +84,13 @@ jobs:
 
       - name: Run Unit Tests
         run: cd backend && npm run test
+
+  security-audit:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Check for security vulnerabilities
+        run: cd backend && npm audit --audit-level=medium
