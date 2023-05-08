@@ -94,3 +94,31 @@ jobs:
 
       - name: Check for security vulnerabilities
         run: cd backend && npm audit --audit-level=high
+
+  static-analysis:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: javascript
+
+    - name: Setup Node
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16.x
+
+    - name: Insall Dependencies
+      run: cd backend && npm install
+
+    - name: Build
+      run: cd backend && npm run build
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v1
+      with:
+        languages: javascript
+        query: codeql/ql/src/Security/CWE-079/SQLInjection.ql
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        sarif_file: codeql-analysis-results.sarif
