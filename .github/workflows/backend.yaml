@@ -187,5 +187,5 @@ jobs:
         run: |
           export BACKEND_URL=CICD-AnyHasher.us-east-1.elasticbeanstalk.com
           cd backend/e2e
-          chmod +x ./smoke-test.sh
-          ./smoke-test.sh
+          chmod +x ./backend-smoke.sh
+          ./backend-smoke.sh
