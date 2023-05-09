@@ -8,6 +8,9 @@ const port = process.env.PORT || 5001;
 
 app.use(cors());
 app.use('/hash', hashRoutes);
+app.use('/', (req, res) => {
+    res.send('OK!');
+});
 
 app.listen(port, () => {
     // tslint:disable-next-line
