@@ -1,5 +1,20 @@
-name: Continuous-Integration
-on: [push]
+name: Backend
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yaml'
+    branches:
+      - master
+      - backend
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yaml'
+    branches:
+      - master
+      - backend
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,14 +40,11 @@ jobs:
       - name: Build
         run: cd backend && npm run build
 
-      - name: Generate Artifact
-        run: cd backend/build && zip -r archive.zip ./ -x '*.git*'
-
       - name: Store Artifact
         uses: actions/upload-artifact@v3
         with:
           name: backend-artifact
-          path: backend/build/archive.zip
+          path: backend/build/
 
   lint:
     needs: [build]
@@ -128,3 +140,52 @@ jobs:
           query: codeql/ql/src/Security/CWE-079/SQLInjection.ql
           github_token: ${{ secrets.GITHUB_TOKEN }}
           sarif_file: codeql-analysis-results.sarif
+
+  deploy_to_eb:
+    if: github.ref == 'refs/heads/master'
+    needs: [security-audit, static-analysis, lint, test]
+    runs-on: ubuntu-latest
+    outputs:
+      eb-env-url: ${{ steps.deploy.outputs.eb-env-url }}
+    steps:
+      - name: Get Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: backend-artifact
+          path: backend/build
+
+      - name: Prepare ProcFile
+        run: |
+          echo "web: node server.js" > backend/build/Procfile
+
+      - name: Prepare Zip
+        run: |
+          cd backend/build
+          zip -r artifact.zip ./ -x '*.git*'
+
+      - name: Deploy to EB
+        id: deploy
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: CICD-AnyHasher
+          environment_name: CICD-AnyHasher-env
+          version_label: anyhasher-${{ github.run_number }}
+          region: us-east-1
+          deployment_package: backend/build/artifact.zip
+
+  verify-production:
+    runs-on: ubuntu-latest
+    needs: [deploy_to_eb]
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Run Smoke Test
+        run: |
+          export BACKEND_URL=CICD-AnyHasher.us-east-1.elasticbeanstalk.com
+          cd backend/e2e
+          chmod +x ./smoke-test.sh
+          ./smoke-test.sh
